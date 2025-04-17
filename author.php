@@ -11,6 +11,12 @@ if (!$conn) {
   die("Connection failed: " . mysqli_connect_error());
 }
 
+
+
+
+// Fetch distinct nationalities for dropdown
+$nationalities_result = mysqli_query($conn, "SELECT DISTINCT Author_Nationality FROM authors");
+
 // Handle Create
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create'])) {
   $name = $_POST['name'];
@@ -38,21 +44,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete'])) {
   try {
     $sql = "DELETE FROM authors WHERE Author_ID=$id";
     mysqli_query($conn, $sql);
-  header("Location: author.php");
+    header("Location: author.php");
   } catch (\Throwable $th) {
     // Handle foreign key constraint error
 
     echo "
-    <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show' role='alert'>
+    <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show mt-5' role='alert'>
       Cannot delete this author record as it is referenced in other records.
       <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
     </div>";
-
   }
 }
 
+$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
+$filter_nationality = isset($_GET['filter_nationality']) ? mysqli_real_escape_string($conn, $_GET['filter_nationality']) : '';
+
+$where = [];
+
+if (!empty($search)) {
+  $where[] = "(Author_Name LIKE '%$search%' OR Author_Nationality LIKE '%$search%')";
+}
+if (!empty($filter_nationality)) {
+  $where[] = "Author_Nationality = '$filter_nationality'";
+}
+
+$whereClause = '';
+if (!empty($where)) {
+  $whereClause = 'WHERE ' . implode(' AND ', $where);
+}
+
+$sql = "SELECT * FROM authors $whereClause";
+$result = mysqli_query($conn, $sql);
+
 // Fetch all authors
-$result = mysqli_query($conn, "SELECT * FROM authors");
+// $result = mysqli_query($conn, "SELECT * FROM authors");
 
 ?>
 
@@ -66,15 +91,35 @@ $result = mysqli_query($conn, "SELECT * FROM authors");
 </head>
 
 <body>
-<?php
-// Include header and navigation
-include 'nav.php';
-?>
+  <?php
+  // Include header and navigation
+  include 'nav.php';
+  ?>
   <div class="container mt-2">
-    <h2 class="mb-2">Authors Table</h2>
+    <h1 class="text-primary py-2 text-center">Authors Management</h2>
 
     <!-- Button trigger modal for Create -->
     <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Author</button>
+
+    <form method="GET" class="row g-2 align-items-center mb-3">
+      <div class="col-md-4">
+        <input type="text" name="search" class="form-control" placeholder="Search by name or nationality" value="<?= htmlspecialchars($search) ?>">
+      </div>
+      <div class="col-md-4">
+        <select name="filter_nationality" class="form-select">
+          <option value="">Filter by Nationality</option>
+          <?php while ($nat = mysqli_fetch_assoc($nationalities_result)): ?>
+            <option value="<?= htmlspecialchars($nat['Author_Nationality']) ?>" <?= $filter_nationality == $nat['Author_Nationality'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($nat['Author_Nationality']) ?>
+            </option>
+          <?php endwhile; ?>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">Search / Filter</button>
+        <a href="author.php" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
 
     <?php if (mysqli_num_rows($result) > 0): ?>
       <div class="table-responsive">
@@ -189,13 +234,13 @@ include 'nav.php';
     </div>
   </div>
   <?php
-// Include footer
-include 'footer.php';
-?>
-<?php
-mysqli_close($conn);
+  // Include footer
+  include 'footer.php';
+  ?>
+  <?php
+  mysqli_close($conn);
 
-?>
+  ?>
   <script src="./bootstrap-5.3.3-dist/bootstrap-5.3.3-dist/js/bootstrap.bundle.js"></script>
 </body>
 

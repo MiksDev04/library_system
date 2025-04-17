@@ -48,15 +48,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete'])) {
         //throw $th;
         // Handle foreign key constraint error
         echo "
-        <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show' role='alert'>
+        <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show mt-5' role='alert'>
           Cannot delete this book record as it is referenced in other records.
           <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
         </div>";
     }
 }
 
-// Fetch all books
-$result = mysqli_query($conn, "SELECT * FROM books");
+$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
+$genre_filter = isset($_GET['genre_filter']) ? mysqli_real_escape_string($conn, $_GET['genre_filter']) : '';
+
+$query = "SELECT * FROM books WHERE 1";
+
+if (!empty($search)) {
+    $query .= " AND (Book_Title LIKE '%$search%' OR Book_ISBN LIKE '%$search%' OR Book_Genre LIKE '%$search%')";
+}
+
+if (!empty($genre_filter)) {
+    $query .= " AND Book_Genre = '$genre_filter'";
+}
+
+
+$result = mysqli_query($conn, $query);
+
 $authors_result = mysqli_query($conn, "SELECT * FROM authors");
 // Fetch all authors for the dropdown in the Add and Edit modals
 ?>
@@ -77,10 +91,32 @@ $authors_result = mysqli_query($conn, "SELECT * FROM authors");
     include 'nav.php';
     ?>
     <div class="container mt-2">
-        <h2 class="mb-2">Books Table</h2>
+        <h1 class="text-primary py-2 text-center">Books Management</h2>
 
         <!-- Button trigger modal for Create -->
         <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Book</button>
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search by title, genre, ISBN..." value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+            </div>
+            <div class="col-md-3">
+                <select name="genre_filter" class="form-select">
+                    <option value="">All Genres</option>
+                    <?php
+                    $genres = json_decode(file_get_contents("genres.json"), true);
+                    foreach ($genres as $genre) {
+                        $selected = (isset($_GET['genre_filter']) && $_GET['genre_filter'] === $genre) ? 'selected' : '';
+                        echo "<option value=\"$genre\" $selected>$genre</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary">Search / Filter</button>
+                <a href="book.php" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
 
         <?php if (mysqli_num_rows($result) > 0): ?>
             <div class="table-responsive">

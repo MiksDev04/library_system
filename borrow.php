@@ -54,13 +54,37 @@ if (isset($_GET['delete'])) {
     Cannot delete this borrowing record as it is referenced in other records.
     <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
     </div>";
-
-    } 
-    
+    }
 }
 
 // Fetch records for borrowing, books, and members
-$borrowing_result = mysqli_query($conn, "SELECT * FROM borrowingrecords");
+$search_member = isset($_GET['search_member']) ? $_GET['search_member'] : '';
+$search_book = isset($_GET['search_book']) ? $_GET['search_book'] : '';
+$filter_date = isset($_GET['filter_date']) ? $_GET['filter_date'] : '';
+
+$query = "SELECT br.*, b.Book_Title, m.Member_Name 
+          FROM borrowingrecords br
+          JOIN books b ON br.Book_ID = b.Book_ID
+          JOIN members m ON br.Member_ID = m.Member_ID
+          WHERE 1=1";
+
+if (!empty($search_member)) {
+    $search_member = mysqli_real_escape_string($conn, $search_member);
+    $query .= " AND m.Member_Name LIKE '%$search_member%'";
+}
+
+if (!empty($search_book)) {
+    $search_book = mysqli_real_escape_string($conn, $search_book);
+    $query .= " AND b.Book_Title LIKE '%$search_book%'";
+}
+
+if (!empty($filter_date)) {
+    $filter_date = mysqli_real_escape_string($conn, $filter_date);
+    $query .= " AND br.Borrowing_Date = '$filter_date'";
+}
+
+$borrowing_result = mysqli_query($conn, $query);
+
 $books_result = mysqli_query($conn, "SELECT * FROM books");
 $members_result = mysqli_query($conn, "SELECT * FROM members");
 ?>
@@ -77,15 +101,32 @@ $members_result = mysqli_query($conn, "SELECT * FROM members");
 </head>
 
 <body>
-<?php
-// Include header and navigation
-include 'nav.php';
-?>
+    <?php
+    // Include header and navigation
+    include 'nav.php';
+    ?>
     <div class="container mt-2">
-        <h2>Borrowing Records Management</h2>
+        <h1 class="text-primary py-2 text-center">Borrowing Records Management</h2>
 
         <!-- Button to Open Create Modal -->
         <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#createModal">Add Borrowing Record</button>
+
+        <form method="GET" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <input type="text" name="search_member" class="form-control" placeholder="Search Member Name" value="<?= isset($_GET['search_member']) ? $_GET['search_member'] : '' ?>">
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="search_book" class="form-control" placeholder="Search Book Title" value="<?= isset($_GET['search_book']) ? $_GET['search_book'] : '' ?>">
+    </div>
+    <div class="col-md-3">
+        <input type="date" name="filter_date" class="form-control" value="<?= isset($_GET['filter_date']) ? $_GET['filter_date'] : '' ?>">
+    </div>
+    <div class="col-md-3 d-grid gap-2 d-md-flex">
+        <button type="submit" class="btn btn-outline-primary">Search / Filter</button>
+        <a href="<?= strtok($_SERVER["REQUEST_URI"], '?') ?>" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
 
         <!-- Table to Display Borrowing Records -->
         <div class="table-responsive">
@@ -107,20 +148,9 @@ include 'nav.php';
                                 <td><?= $row['Borrowing_ID'] ?></td>
                                 <td><?= $row['Borrowing_Date'] ?></td>
                                 <td><?= $row['Borrowing_Purpose'] ?></td>
-                                <td>
-                                    <?php
-                                    $book_result = mysqli_query($conn, "SELECT * FROM books WHERE Book_ID = " . $row['Book_ID']);
-                                    $book = mysqli_fetch_assoc($book_result);
-                                    echo $book['Book_Title'];
-                                    ?>
-                                </td>
-                                <td>
-                                    <?php
-                                    $member_result = mysqli_query($conn, "SELECT * FROM members WHERE Member_ID = " . $row['Member_ID']);
-                                    $member = mysqli_fetch_assoc($member_result);
-                                    echo $member['Member_Name'];
-                                    ?>
-                                </td>
+                                <td><?= $row['Book_Title'] ?></td>
+                                <td><?= $row['Member_Name'] ?></td>
+
                                 <td>
                                     <!-- Edit Button -->
                                     <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal<?= $row['Borrowing_ID'] ?>">Edit</button>
@@ -252,13 +282,13 @@ include 'nav.php';
         </div>
     </div>
     <?php
-// Include footer
-include 'footer.php';
-?>
-<?php
-mysqli_close($conn);
+    // Include footer
+    include 'footer.php';
+    ?>
+    <?php
+    mysqli_close($conn);
 
-?>
+    ?>
     <script src="./bootstrap-5.3.3-dist/bootstrap-5.3.3-dist/js/bootstrap.bundle.js"></script>
 </body>
 

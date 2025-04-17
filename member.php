@@ -20,7 +20,7 @@ if (isset($_POST['create'])) {
     $query = "INSERT INTO members (Member_Name, Member_Email, Member_Phone_Number) VALUES ('$name', '$email', '$phone')";
     mysqli_query($conn, $query);
     header("Location: member.php"); // Redirect to avoid form resubmission
-    
+
 }
 
 if (isset($_POST['update'])) {
@@ -45,20 +45,28 @@ if (isset($_GET['delete'])) {
     } catch (\Throwable $th) {
         //throw $th;
         echo "
-        <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show' role='alert'>
+        <div class=' position-fixed w-100 z-3 alert alert-danger alert-dismissible fade show mt-5' role='alert'>
           Cannot delete this member record as it is referenced in other records.
           <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
         </div>";
-
     }
+}
+$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 
+if (!empty($search)) {
+    $members_result = mysqli_query($conn, "SELECT * FROM members 
+        WHERE Member_Name LIKE '%$search%' 
+        OR Member_Email LIKE '%$search%' 
+        OR Member_Phone_Number LIKE '%$search%'");
+} else {
+    $members_result = mysqli_query($conn, "SELECT * FROM members");
 }
 
-$members_result = mysqli_query($conn, "SELECT * FROM members");
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,19 +74,29 @@ $members_result = mysqli_query($conn, "SELECT * FROM members");
     <link href="./bootstrap-5.3.3-dist/bootstrap-5.3.3-dist/css/bootstrap.min.css" rel="stylesheet">
 
 </head>
+
 <body>
-<?php
-// Include header and navigation
-include 'nav.php';
-?>
+    <?php
+    // Include header and navigation
+    include 'nav.php';
+    ?>
     <div class="container mt-2">
-        <h2>Members Management</h2>
+        <h1 class="text-primary py-2 text-center">Members Management</h1>
 
         <!-- Button to Open Create Modal -->
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">Add Member</button>
+        <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#createModal">Add Member</button>
+        <form method="GET" class="row g-2 mb-2">
+            <div class="col">
+                <input type="text" name="search" class="form-control" placeholder="Search by name, email, or phone" value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+            </div>
+            <div class="col">
+                <button type="submit" class="btn btn-outline-primary">Search / Filter</button>
+                <a href="member.php" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
 
         <!-- Table to Display Members -->
-        <table class="table mt-2 table-bordered">
+        <table class="table mt-3 table-bordered">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -99,7 +117,7 @@ include 'nav.php';
                             <td>
                                 <!-- Edit Button -->
                                 <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal<?= $row['Member_ID'] ?>">Edit</button>
-                                
+
                                 <!-- Delete Button (opens the confirmation modal) -->
                                 <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal<?= $row['Member_ID'] ?>">Delete</button>
                             </td>
@@ -157,7 +175,9 @@ include 'nav.php';
 
                     <?php endwhile; ?>
                 <?php else : ?>
-                    <tr><td colspan="5" class="text-center">No records found</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center">No records found</td>
+                    </tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -190,13 +210,14 @@ include 'nav.php';
         </div>
     </div>
     <?php
-// Include footer
-include 'footer.php';
-?>
-<?php
-mysqli_close($conn);
+    // Include footer
+    include 'footer.php';
+    ?>
+    <?php
+    mysqli_close($conn);
 
-?>
+    ?>
     <script src="./bootstrap-5.3.3-dist/bootstrap-5.3.3-dist/js/bootstrap.bundle.js"></script>
 </body>
+
 </html>

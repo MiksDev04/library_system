@@ -1,101 +1,173 @@
 <?php
-$conn = mysqli_connect("localhost", "root", "", "new_library");
+$host = "localhost";
+$user = "root";
+$pass = "";
+$db = "new_library"; // Replace with your actual database name
+
+$conn = mysqli_connect($host, $user, $pass, $db);
+
 if (!$conn) {
     die("Connection failed: " . mysqli_connect_error());
 }
 
-$authors_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM authors"))['total'];
-$books_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM books"))['total'];
-$members_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM members"))['total'];
-$borrowing_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS total FROM borrowingrecords"))['total'];
+
+session_start();
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $password = $_POST['password'];
+
+    $sql = "SELECT * FROM users WHERE email = '$email'";
+    $result = mysqli_query($conn, $sql);
+    $user = mysqli_fetch_assoc($result);
+
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['fullname'] = $user['fullname'];
+        header("Location: home.php");
+        exit();
+    } else {
+        $error = "Invalid email or password";
+    }
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Library Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f4f4f4;
-    }
-    .card {
-      border-radius: 1rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .icon svg {
-      width: 50px;
-      height: 50px;
-      margin-bottom: 10px;
-      fill: white;
-    }
-    footer {
-      background: #343a40;
-      color: white;
-      text-align: center;
-      padding: 1rem 0;
-      margin-top: 40px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library System - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --accent-color: #2e59d9;
+            --text-dark: #5a5c69;
+        }
+        
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .login-header h2 {
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        
+        .form-control {
+            padding: 0.75rem 1rem;
+            border-radius: 0.35rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+        }
+        
+        .btn-login {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 0.75rem;
+            font-weight: 600;
+            width: 100%;
+            border-radius: 0.35rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+        
+        .register-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-dark);
+        }
+        
+        .register-link a {
+            color: var(--primary-color);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert {
+            border-radius: 0.35rem;
+        }
+    </style>
 </head>
 <body>
-
-<?php
-// Include header and navigation
-include 'nav.php';
-?>
-
-<div class="container py-5">
-  <h2 class="mb-4 text-center">Dashboard Overview</h2>
-  <div class="row text-white">
-    <div class="col-md-3 mb-4">
-      <div class="card bg-primary text-center p-3">
-        <div class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 96 128a128 128 0 0 0 128 128zm89.6 32h-11.7a174.8 174.8 0 0 1-155.8 0H134.4A134.4 134.4 0 0 0 0 422.4V464a48 48 0 0 0 48 48H400a48 48 0 0 0 48-48v-41.6A134.4 134.4 0 0 0 313.6 288z"/></svg>
+    <div class="container p-5">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="bi bi-book"></i>
+                <h2>Welcome to Our Library</h2>
+                <p class="text-muted">Please login to continue</p>
+            </div>
+            
+            <?php if(isset($error)): ?>
+                <div class="alert alert-danger"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="bi bi-box-arrow-in-right"></i> Login
+                </button>
+            </form>
+            
+            <div class="register-link">
+                Don't have an account? <a href="register.php">Register here</a>
+            </div>
         </div>
-        <h5>Authors</h5>
-        <h2><?= $authors_count ?></h2>
-      </div>
     </div>
-    <div class="col-md-3 mb-4">
-      <div class="card bg-success text-center p-3">
-        <div class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M96 96V64c0-17.7 14.3-32 32-32H320c17.7 0 32 14.3 32 32V96h32c17.7 0 32 14.3 32 32V448c0 17.7-14.3 32-32 32H64c-17.7 0-32-14.3-32-32V128c0-17.7 14.3-32 32-32H96zm64-32v32H288V64H160z"/></svg>
-        </div>
-        <h5>Books</h5>
-        <h2><?= $books_count ?></h2>
-      </div>
-    </div>
-    <div class="col-md-3 mb-4">
-      <div class="card bg-warning text-center p-3">
-        <div class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M96 96a64 64 0 1 1 0 128 64 64 0 1 1 0-128zM0 416c0-70.7 57.3-128 128-128h64c70.7 0 128 57.3 128 128v32H0V416zM480 256a64 64 0 1 0 0-128 64 64 0 1 0 0 128zm32 32c-35.3 0-66.9 15.5-88.4 40H560c8.8 0 16 7.2 16 16v32H320v-32c0-53-43-96-96-96H128c-53 0-96 43-96 96v32H0v-32C0 316.3 57.3 256 128 256h64c70.7 0 128 57.3 128 128v32h192v-32c0-17.7-14.3-32-32-32H400.4c21.5-24.5 53.1-40 88.4-40z"/></svg>
-        </div>
-        <h5>Members</h5>
-        <h2><?= $members_count ?></h2>
-      </div>
-    </div>
-    <div class="col-md-3 mb-4">
-      <div class="card bg-danger text-center p-3">
-        <div class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M32 32C14.3 32 0 46.3 0 64s14.3 32 32 32V448c0 35.3 28.7 64 64 64H288c35.3 0 64-28.7 64-64V96c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM128 160h128c8.8 0 16 7.2 16 16s-7.2 16-16 16H128c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 96h128c8.8 0 16 7.2 16 16s-7.2 16-16 16H128c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 96h128c8.8 0 16 7.2 16 16s-7.2 16-16 16H128c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/></svg>
-        </div>
-        <h5>Borrowing</h5>
-        <h2><?= $borrowing_count ?></h2>
-      </div>
-    </div>
-  </div>
-</div>
 
-<?php
-// Include footer
-include 'footer.php';
-?>
-<?php
-mysqli_close($conn);
-
-?>
-<script src="./bootstrap-5.3.3-dist/bootstrap-5.3.3-dist/js/bootstrap.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
